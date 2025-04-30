@@ -4,10 +4,10 @@ description: |
   'Detects tampering or disabling of security-related Office 365 policies (Audit Logging, ATP SafeLinks, SafeAttachments, AntiPhish, DLP) via administrative actions. This behaviour may indicate an adversary attempting to evade detection or reduce policy-based protections.'
 technicalContext:
   'This detection uses the `OfficeActivity` table from the `Office365` connector, specifically focusing on `ExchangeAdmin` record types. Administrative operations such as `Remove-DlpCompliancePolicy` or `Disable-AntiPhishRule` are flagged. This logic assumes all administrative activity related to these security policies should be minimal and deliberate. Unexpected or frequent changes may indicate compromise or misconfiguration.'
-  detection:
-    - Identifies operations matching policy disable/removal actions.
-    - Parses `ClientIP` and `Port` for correlation and triage.
-    - Aggregates results by user, IP, port, and operation status.
+detection:
+  - Identifies operations matching policy disable/removal actions.
+  - Parses `ClientIP` and `Port` for correlation and triage.
+  - Aggregates results by user, IP, port, and operation status.
 blindSpots:
   - Non-standard logs or activity via APIs not recorded in OfficeActivity will not be captured.
 assumptions:
