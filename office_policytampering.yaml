@@ -1,10 +1,50 @@
 id: fbd72eb8-087e-466b-bd54-1ca6ea08c6d3
 name: Office Policy Tampering
 description: |
-  'Identifies if any tampering is done to either auditlog, ATP Safelink, SafeAttachment, AntiPhish or Dlp policy. 
-  An adversary may use this technique to evade detection or avoid other policy based defenses.
-  References: https://docs.microsoft.com/powershell/module/exchange/advanced-threat-protection/remove-antiphishrule?view=exchange-ps.'
+  'Detects tampering or disabling of security-related Office 365 policies (Audit Logging, ATP SafeLinks, SafeAttachments, AntiPhish, DLP) via administrative actions. This behaviour may indicate an adversary attempting to evade detection or reduce policy-based protections.'
+technicalContext:
+  'This detection uses the `OfficeActivity` table from the `Office365` connector, specifically focusing on `ExchangeAdmin` record types. Administrative operations such as `Remove-DlpCompliancePolicy` or `Disable-AntiPhishRule` are flagged. This logic assumes all administrative activity related to these security policies should be minimal and deliberate. Unexpected or frequent changes may indicate compromise or misconfiguration.'
+  detection:
+    - Identifies operations matching policy disable/removal actions.
+    - Parses `ClientIP` and `Port` for correlation and triage.
+    - Aggregates results by user, IP, port, and operation status.
+blindSpots:
+  - Non-standard logs or activity via APIs not recorded in OfficeActivity will not be captured.
+assumptions:
+ - All policy removal or disablement actions are performed via ExchangeAdmin and logged.
+ - Only Admin or DcAdmin roles can perform impactful changes (may not hold true in some misconfigured environments).
+faslePositives:
+  knownScenarios:
+    - Scheduled or legitimate policy changes.
+    - Actions by security engineers during threat testing or policy updates.
+    - Migrations or testing in dev environments improperly mirrored in production logs.
+  minimisationRecommendations:
+    - Add allowlisting logic for known maintenance users or service accounts.
+    - Filter on `ResultStatus` to exclude failed attempts.
+    - Use scheduled time filters to suppress known change windows.
+validation:
+  sampleAlert:
+   - Create a test policy with no meaningful impact, and name appropriately; “Test Anti-Phish Policy 001”.
+   - Assign a test account with the appropriate permissions.
+   - Execute a PowerShell command that will trigger the KQL logic
+   - E.g. Remove-AntiPhishPolicy -Identity "Test Anti-Phish Policy 001"
+   - Confirm event logs appear in the OfficeActivity table with the appropriate operation.
+   - Ensure the alert fires and captures the correct user, IP, and operation.
 severity: Medium
+response:
+  - Contact user/team associated with the UserId.
+  - Check for approved change request or CAB record.
+  - Investigate past activity of the user/IP.
+  - Check for other security-related changes around the same time.
+  - If unauthorised, immediately re-enable affected policies.
+  - Review user account for compromise (password reset, suspicious authentications, etc.)
+  - Record findings and actions in ticketing system.
+  - Escalate to IR team if tampering is malicious.
+references:
+  - https://learn.microsoft.com/en-gb/powershell/module/exchange/remove-antiphishrule?view=exchange-ps
+  - https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/officeactivity
+  - https://attack.mitre.org/techniques/T1562/
+  - https://attack.mitre.org/techniques/T1098/
 status: Available 
 requiredDataConnectors:
   - connectorId: Office365
